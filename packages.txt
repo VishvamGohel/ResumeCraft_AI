@@ -1,0 +1,4 @@
+pango
+libpango-1.0-0
+gobject-introspection
+libgirepository1.0-dev
