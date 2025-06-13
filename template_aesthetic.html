@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ name }}'s Resume</title>
+    <style>
+        /* --- EMBEDDED FONTS --- */
+        @font-face { font-family: 'Playfair Display'; font-style: normal; font-weight: 700; src: url(https://fonts.gstatic.com/s/playfairdisplay/v30/nuFvD-vYSZviVYUb_rj3ij__anPXJzD_bg.woff2) format('woff2'); }
+        @font-face { font-family: 'Poppins'; font-style: normal; font-weight: 300; src: url(https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLDz8Vw.woff2) format('woff2'); }
+        @font-face { font-family: 'Poppins'; font-style: normal; font-weight: 400; src: url(https://fonts.gstatic.com/s/poppins/v20/pxiEyp8kv8JHgFVrFJA.woff2) format('woff2'); }
+
+        @page { size: A4; margin: 20mm; }
+
+        body { font-family: 'Poppins', sans-serif; font-weight: 300; color: #4a4a4a; line-height: 1.8; }
+
+        .header { text-align: center; margin-bottom: 50px; }
+        .header h1 { font-family: 'Playfair Display', serif; font-size: 3em; margin: 0; color: #2a2a2a; font-weight: 700; }
+        .header p { margin: 10px 0; font-size: 1.1em; color: {{ accent_color | default('#bcaaa4') }}; letter-spacing: 1px; }
+
+        .section { margin-bottom: 30px; page-break-inside: avoid; }
+        .section h2 { font-family: 'Playfair Display', serif; text-align: center; font-size: 1.3em; color: #333; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; position: relative; }
+        .section h2::after { content: ''; display: block; width: 50px; height: 1px; background: {{ accent_color | default('#bcaaa4') }}; margin: 8px auto 0; }
+
+        .entry { margin-bottom: 20px; }
+        .entry h3 { margin: 0; font-size: 1.1em; font-family: 'Poppins', sans-serif; font-weight: 400; }
+        .entry p { margin: 0 0 5px 0; font-style: normal; color: #777; font-size: 0.9em; }
+        .entry ul { padding-left: 20px; margin-top: 5px; list-style-type: '— '; }
+
+        .skills-list { text-align: center; }
+        .skills-list span { display: inline-block; padding: 2px 10px; margin: 4px; border: 1px solid #ddd; border-radius: 15px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header"><h1>{{ name }}</h1><p>{{ email }}</p></div>
+        <div class="section"><h2>Education</h2>{% for edu in education %}<div class="entry" style="text-align: center;"><h3>{{ edu.degree }}</h3><p>{{ edu.institution }} | {{ edu.year }}</p></div>{% endfor %}</div>
+        <div class="section"><h2>Skills</h2><div class="skills-list">{% for skill in skills %}<span>{{ skill }}</span>{% endfor %}</div></div>
+        <div class="section"><h2>Projects</h2>{% for proj in projects %}<div class="entry"><h3>{{ proj.name }}</h3><ul>{% for detail in proj.details %}<li>{{ detail }}</li>{% endfor %}</ul></div>{% endfor %}</div>
+        {% if experience %}<div class="section"><h2>Experience</h2>{% for exp in experience %}<div class="entry"><h3>{{ exp.title }} at {{ exp.company }}</h3><p>{{ exp.duration }}</p><ul>{% for detail in exp.details %}<li>{{ detail }}</li>{% endfor %}</ul></div>{% endfor %}</div>{% endif %}
+    </div>
+</body>
+</html>

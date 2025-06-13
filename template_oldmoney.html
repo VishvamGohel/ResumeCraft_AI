@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ name }}'s Resume</title>
+    <style>
+        /* --- EMBEDDED FONTS --- */
+        @font-face { font-family: 'Cormorant Garamond'; font-style: normal; font-weight: 700; src: url(https://fonts.gstatic.com/s/cormorantgaramond/v16/co3Wem-A3dt9c3p62gIZYNs4-C9Jn6Qo7w.woff2) format('woff2'); }
+        @font-face { font-family: 'EB Garamond'; font-style: normal; font-weight: 400; src: url(https://fonts.gstatic.com/s/ebgaramond/v27/SlGUmQ5H3D4gPevP7uyWn4b1wA.woff2) format('woff2'); }
+        @font-face { font-family: 'EB Garamond'; font-style: italic; font-weight: 400; src: url(https://fonts.gstatic.com/s/ebgaramond/v27/SlGWmQ5H3D4gPevP7uyWn4b36Q50.woff2) format('woff2'); }
+
+        /* --- KEY FIX: Define page size and margins --- */
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+
+        body {
+            font-family: 'EB Garamond', serif;
+            color: #333333;
+            line-height: 1.7;
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 100%; /* The container will fill the page area inside the margins */
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.8em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin: 0;
+            font-weight: 700;
+        }
+        .header p {
+            margin: 10px 0;
+            font-size: 1.1em;
+            color: #555;
+            border-top: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
+            padding: 8px 0;
+            display: inline-block;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            page-break-inside: avoid; /* Prevent sections from splitting across pages */
+        }
+        .section h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.2em;
+            color: #333;
+            letter-spacing: 1.5px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .entry { margin-bottom: 15px; }
+        .entry h3 {
+            margin: 0;
+            font-size: 1.1em;
+            display: inline;
+            font-weight: bold;
+        }
+        .entry .meta {
+            margin: 0;
+            font-style: italic;
+            color: #555;
+            float: right;
+            font-size: 0.9em;
+        }
+        .entry ul {
+            padding-left: 18px;
+            margin-top: 5px;
+            list-style: none;
+        }
+        .entry ul li {
+            margin-bottom: 2px;
+        }
+        .entry ul li::before {
+            content: "•";
+            color: {{ accent_color | default('#8c7853') }};
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-left: -1em;
+        }
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ name }}</h1>
+            <p>{{ email }}</p>
+        </div>
+        <div class="section">
+            <h2>Professional Profile</h2>
+            <div class="entry">
+                <p>A highly motivated student with a proven ability in project management and software development. Seeking to apply technical skills and creativity to the {{ target_role | default('entry-level') }} role.</p>
+            </div>
+        </div>
+        <div class="section">
+            <h2>Education</h2>
+            {% for edu in education %}
+            <div class="entry">
+                <h3>{{ edu.degree }}</h3>
+                <span class="meta">{{ edu.institution }} | {{ edu.year }}</span>
+                <div class="clearfix"></div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="section">
+            <h2>Skills & Competencies</h2>
+            <div class="entry">
+                <p>{{ skills | join(', ') }}</p>
+            </div>
+        </div>
+        <div class="section">
+            <h2>Projects</h2>
+            {% for proj in projects %}
+            <div class="entry">
+                <h3>{{ proj.name }}</h3>
+                <div class="clearfix"></div>
+                <ul>{% for detail in proj.details %}<li>{{ detail }}</li>{% endfor %}</ul>
+            </div>
+            {% endfor %}
+        </div>
+        {% if experience %}
+        <div class="section">
+            <h2>Experience</h2>
+            {% for exp in experience %}
+            <div class="entry">
+                <h3>{{ exp.title }}</h3><span class="meta">{{ exp.company }} | {{ exp.duration }}</span>
+                <div class="clearfix"></div>
+                <ul>{% for detail in exp.details %}<li>{{ detail }}</li>{% endfor %}</ul>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
