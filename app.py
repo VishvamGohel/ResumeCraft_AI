@@ -1,4 +1,4 @@
-# --- START OF FILE app.py (Final Version with Robust Pathing) ---
+# --- START OF FILE app.py (Final Version with In-Memory Image Loading) ---
 
 import streamlit as st
 import os
@@ -7,27 +7,27 @@ from dotenv import load_dotenv
 import cohere
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
+from PIL import Image  # Import the Python Imaging Library
 
 # --- Configuration ---
 st.set_page_config(page_title="ResumeCraft AI", page_icon="✨", layout="wide")
 
-# --- Define Base Directory using an OS-agnostic method ---
-# This gets the directory where the app.py script itself is located.
+# --- Define Base Directory ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 
-# --- Load API Key (Handles both local .env and Streamlit Secrets) ---
+# --- Load API Key ---
 def load_api_key():
     try:
         return st.secrets["COHERE_API_KEY"]
     except (KeyError, FileNotFoundError):
-        # Construct path to .env file for local development
         dotenv_path = os.path.join(BASE_DIR, "app.env")
         load_dotenv(dotenv_path=dotenv_path)
         return os.getenv("COHERE_API_KEY")
 
 api_key = load_api_key()
 if not api_key:
-    st.error("❌ COHERE_API_KEY not found. Please set it in your app.env file or in Streamlit Cloud secrets.")
+    st.error("❌ COHERE_API_KEY not found. Please set it in secrets or app.env.")
     st.stop()
 
 # --- Initialize AI Client ---
@@ -37,17 +37,27 @@ except Exception as e:
     st.error(f"❌ Error configuring Cohere client: {e}")
     st.stop()
 
-# --- Helper Function ---
+# --- Helper Functions ---
 def html_to_pdf(html_string):
     return HTML(string=html_string).write_pdf()
 
-# --- Templates Dictionary using os.path.join for absolute reliability ---
-ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+# --- NEW: Helper function to safely load images into memory ---
+def load_image(filename):
+    try:
+        # Open the image file with Pillow and return the Image object
+        return Image.open(os.path.join(ASSETS_DIR, filename))
+    except FileNotFoundError:
+        # If an image is missing, create a red placeholder to prevent crashes
+        st.error(f"Asset not found: {filename}. Please ensure it's in the 'assets' folder.")
+        return Image.new('RGB', (400, 300), color='red')
+
+# --- NEW: Load all images into memory ONCE at the start ---
+# The dictionary now holds Image objects, not file paths.
 templates = {
-    "Corporate": ("template_oldmoney.html", "#8c7853", os.path.join(ASSETS_DIR, "corporate.png")),
-    "Modern": ("template_twocol.html", "#3498db", os.path.join(ASSETS_DIR, "modern.png")),
-    "Aesthetic": ("template_aesthetic.html", "#bcaaa4", os.path.join(ASSETS_DIR, "aesthetic.png")),
-    "Classic": ("template.html", "#2c3e50", os.path.join(ASSETS_DIR, "classic.png"))
+    "Corporate": ("template_oldmoney.html", "#8c7853", load_image("corporate.png")),
+    "Modern": ("template_twocol.html", "#3498db", load_image("modern.png")),
+    "Aesthetic": ("template_aesthetic.html", "#bcaaa4", load_image("aesthetic.png")),
+    "Classic": ("template.html", "#2c3e50", load_image("classic.png"))
 }
 
 # --- UI: Sidebar ---
@@ -63,8 +73,7 @@ with st.sidebar:
     with st.expander("🧾 Work Experience (Optional)"):
         experience_input = st.text_area("Enter work experience if any")
 
-# --- CSS Injection & Hero Section ---
-# (No changes needed here, this part is fine)
+# --- CSS & Hero Section (No changes) ---
 st.markdown("""<style>...</style>""", unsafe_allow_html=True) 
 st.markdown("""<div class="hero-section">...</div>""", unsafe_allow_html=True)
 
@@ -75,15 +84,16 @@ st.markdown("Select a template to generate your resume with that look and feel."
 st.write("") 
 
 def create_template_card(template_name):
-    filename, color, image_path = templates[template_name]
+    filename, color, image_object = templates[template_name] # It's now an object, not a path
     st.markdown(f'<div class="template-card">', unsafe_allow_html=True)
     st.subheader(template_name)
-    st.image(image_path, use_container_width=True)
+    # st.image now receives the raw image data (Pillow object)
+    st.image(image_object, use_container_width=True)
     if st.button(f"Generate with {template_name} Style", key=f"gen_{template_name}", use_container_width=True):
         st.session_state.button_clicked = {"template_filename": filename, "accent_color": color}
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Grid creation logic
+# Grid creation
 row1_col1, row1_col2 = st.columns(2)
 with row1_col1: create_template_card("Corporate")
 with row1_col2: create_template_card("Modern")
@@ -113,11 +123,10 @@ if 'generation_request' in st.session_state and st.session_state.generation_requ
     with st.spinner("AI is crafting your signature resume..."):
         try:
             user_data = request['user_data']
-            json_prompt = f"Generate a resume in structured JSON format...DETAILS TO PARSE: {user_data}" # Truncated for brevity
+            json_prompt = f"Generate a resume...DETAILS TO PARSE: {user_data}" # Truncated
             response = co.chat(model='command-r', message=json_prompt, temperature=0.2)
             json_string = response.text[response.text.find('{'):response.text.rfind('}')+1]
             resume_data = json.loads(json_string)
-            # Use the robust BASE_DIR for the template loader
             env = Environment(loader=FileSystemLoader(BASE_DIR)) 
             template = env.get_template(request["template_filename"])
             html_out = template.render(resume_data, accent_color=request["accent_color"])
@@ -130,5 +139,4 @@ if 'generation_request' in st.session_state and st.session_state.generation_requ
                 st.download_button(label="📥 Download PDF Resume", data=pdf_bytes, file_name=f"{user_data['name'].replace(' ', '_')}_Resume.pdf", mime="application/pdf")
         except Exception as e:
             st.error(f"❌ An unexpected error occurred: {e}")
-            # Add more specific error handling if needed
     st.session_state.generation_request = None
