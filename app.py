@@ -1,4 +1,4 @@
-# --- START OF FILE app.py (Simplified Sidebar UI) ---
+# --- START OF FILE app.py (Visual Selector, No Homepage) ---
 
 import streamlit as st
 import os
@@ -7,9 +7,10 @@ from dotenv import load_dotenv
 import cohere
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
+from PIL import Image
 
 # --- Configuration ---
-st.set_page_config(page_title="ResumeCraft AI", page_icon="✨", layout="centered")
+st.set_page_config(page_title="ResumeCraft AI", page_icon="✨", layout="wide")
 
 # --- Define Base Directory ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -34,38 +35,31 @@ def get_cohere_client():
 
 co = get_cohere_client()
 
-# --- Helper Function ---
+# --- Helper Functions ---
 def html_to_pdf(html_string):
     return HTML(string=html_string).write_pdf()
 
-# --- Templates Dictionary ---
+def load_image(filename):
+    # This robust function opens images from the assets sub-directory
+    try:
+        return Image.open(os.path.join(BASE_DIR, "assets", filename))
+    except FileNotFoundError:
+        # If an image is missing, we'll now display the error path directly.
+        st.error(f"Asset not found: Please ensure 'assets/{filename}' exists in your GitHub repository.")
+        return Image.new('RGB', (400, 300), color='red')
+
+# --- Load all images into memory ONCE at the start ---
 templates = {
-    "Corporate": ("template_oldmoney.html", "#8c7853"),
-    "Modern": ("template_twocol.html", "#3498db"),
-    "Aesthetic": ("template_aesthetic.html", "#bcaaa4"),
-    "Classic": ("template.html", "#2c3e50")
+    "Corporate": ("template_oldmoney.html", "#8c7853", load_image("corporate.png")),
+    "Modern": ("template_twocol.html", "#3498db", load_image("modern.png")),
+    "Aesthetic": ("template_aesthetic.html", "#bcaaa4", load_image("aesthetic.png")),
+    "Classic": ("template.html", "#2c3e50", load_image("classic.png"))
 }
 
-# --- UI: Sidebar for All Inputs ---
+# --- UI: Sidebar ---
 with st.sidebar:
-    st.title("📄 ResumeCraft AI")
-    st.markdown("Fill in your details, choose a style, and generate your resume.")
-    st.divider()
-
-    # --- Step 1: Choose Style ---
-    st.subheader("1. Choose Your Style")
-    template_name = st.selectbox(
-        "Select a template:",
-        templates.keys()
-    )
-    
-    default_color = templates[template_name][1]
-    accent_color = st.color_picker("Select an accent color:", default_color)
-
-    st.divider()
-
-    # --- Step 2: Enter Information ---
-    st.subheader("2. Enter Your Information")
+    st.title("📝 Your Information")
+    st.markdown("Enter your details below to get started.")
     target_role = st.text_input("🎯 Target Job Role", placeholder="e.g., 'Data Analyst'")
     name = st.text_input("👤 Full Name")
     email = st.text_input("📧 Email")
@@ -75,61 +69,109 @@ with st.sidebar:
     with st.expander("🧾 Work Experience (Optional)"):
         experience_input = st.text_area("Enter work experience if any")
 
+# --- CSS Injection (Simplified) ---
+st.markdown("""
+<style>
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(30px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.fade-in-section {
+  animation: fadeIn 1s ease-in-out;
+}
+.template-card {
+    border: 1px solid #e0e0e0;
+    padding: 1rem;
+    border-radius: 8px;
+    transition: all 0.3s ease-in-out;
+    text-align: center;
+}
+.template-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.08);
+}
+</style>
+""", unsafe_allow_html=True)
+
+# --- Initialize Session State ---
+if "generation_output" not in st.session_state:
+    st.session_state.generation_output = None
+
+# --- Main App Body Logic ---
+if st.session_state.generation_output:
+    # --- STATE 2: Show Results ---
+    st.success("🎉 Your professional resume is ready!")
+    st.balloons()
+    
+    st.subheader("📄 PDF Preview")
+    st.components.v1.html(st.session_state.generation_output["html"], height=800, scrolling=True)
+
+    st.download_button(
+        label="📥 Download PDF Resume",
+        data=st.session_state.generation_output["pdf"],
+        file_name=st.session_state.generation_output["filename"],
+        mime="application/pdf"
+    )
+    
+    if st.button("✨ Create a New Resume"):
+        st.session_state.generation_output = None
+        st.rerun()
+
+else:
+    # --- STATE 1: Show Template Selector (Default View) ---
+    st.title("🎨 Choose Your Resume Style")
+    st.markdown("Select a template to generate your resume. Your details are on the left. 👈")
     st.divider()
 
-    # --- Step 3: Generate ---
-    generate_button = st.button("🚀 Generate Resume", use_container_width=True)
+    generation_request = None
 
+    def create_template_card(col, template_name):
+        nonlocal generation_request
+        with col:
+            filename, color, image_object = templates[template_name]
+            st.markdown(f'<div class="template-card">', unsafe_allow_html=True)
+            st.subheader(template_name)
+            st.image(image_object, use_container_width=True)
+            if st.button(f"Generate with {template_name} Style", key=f"gen_{template_name}", use_container_width=True):
+                generation_request = {"template_filename": filename, "accent_color": color}
+            st.markdown('</div>', unsafe_allow_html=True)
 
-# --- Main App Body ---
-st.title("Your Generated Resume")
-st.markdown("Your resume will appear here once you click the generate button.")
+    row1_col1, row1_col2 = st.columns(2)
+    create_template_card(row1_col1, "Corporate")
+    create_template_card(row1_col2, "Modern")
+    st.markdown("<br>", unsafe_allow_html=True)
+    row2_col1, row2_col2 = st.columns(2)
+    create_template_card(row2_col1, "Aesthetic")
+    create_template_card(row2_col2, "Classic")
 
-if generate_button:
-    if not all([name, email, education_input, skills_input, projects_input]):
-        st.warning("Please fill in all required fields in the sidebar.")
-    else:
-        with st.spinner("AI is crafting your signature resume..."):
-            try:
-                # Get the chosen template's filename
-                template_filename = templates[template_name][0]
-                
-                user_data = {
-                    "target_role": target_role, "name": name, "email": email,
-                    "education_input": education_input, "skills_input": skills_input,
-                    "projects_input": projects_input, "experience_input": experience_input
-                }
+    # --- Generation Logic ---
+    if generation_request:
+        if not all([name, email, education_input, skills_input, projects_input]):
+            st.toast("Hey! Please fill out your details in the sidebar first. 👈", icon="⚠️")
+        else:
+            with st.spinner("AI is crafting your signature resume..."):
+                try:
+                    user_data = {
+                        "target_role": target_role, "name": name, "email": email,
+                        "education_input": education_input, "skills_input": skills_input,
+                        "projects_input": projects_input, "experience_input": experience_input
+                    }
+                    json_prompt = f"Generate a resume...DETAILS TO PARSE: {user_data}"
+                    response = co.chat(model='command-r', message=json_prompt, temperature=0.2)
+                    json_string = response.text[response.text.find('{'):response.text.rfind('}')+1]
+                    resume_data = json.loads(json_string)
+                    env = Environment(loader=FileSystemLoader(BASE_DIR))
+                    template = env.get_template(generation_request["template_filename"])
+                    html_out = template.render(resume_data, accent_color=generation_request["accent_color"])
+                    pdf_bytes = html_to_pdf(html_out)
 
-                json_prompt = f"Generate a resume...DETAILS TO PARSE: {user_data}"
-                
-                response = co.chat(model='command-r', message=json_prompt, temperature=0.2)
-                
-                json_string = response.text[response.text.find('{'):response.text.rfind('}')+1]
-                resume_data = json.loads(json_string)
+                    if pdf_bytes:
+                        st.session_state.generation_output = {
+                            "pdf": pdf_bytes,
+                            "html": html_out,
+                            "filename": f"{user_data['name'].replace(' ', '_')}_Resume.pdf"
+                        }
+                        st.rerun()
 
-                env = Environment(loader=FileSystemLoader(os.getcwd()))
-                template = env.get_template(template_filename)
-                
-                html_out = template.render(resume_data, accent_color=accent_color)
-                
-                pdf_bytes = html_to_pdf(html_out)
-
-                if pdf_bytes:
-                    st.success("🎉 Your professional resume is ready!")
-                    st.balloons()
-                    
-                    st.subheader("📄 PDF Preview")
-                    st.components.v1.html(html_out, height=800, scrolling=True)
-
-                    st.download_button(
-                        label="📥 Download PDF Resume",
-                        data=pdf_bytes,
-                        file_name=f"{name.replace(' ', '_')}_Resume.pdf",
-                        mime="application/pdf"
-                    )
-
-            except json.JSONDecodeError:
-                st.error("❌ AI Parsing Error: The AI returned an invalid format. Please try again.")
-                st.text_area("AI Raw Output (for debugging)", response.text)
-            except Exception as e:
-                st.error(f"❌ An unexpected error occurred: {e}")
+                except Exception as e:
+                    st.error(f"❌ An unexpected error occurred: {e}")
