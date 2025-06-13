@@ -1,4 +1,6 @@
-pango
+libglib2.0-0
+libgdk-pixbuf2.0-0
 libpango-1.0-0
-gobject-introspection
-libgirepository1.0-dev
+libcairo2
+libpangocairo-1.0-0
+libffi-dev
