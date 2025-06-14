@@ -1,4 +1,4 @@
-# --- START OF FILE app.py (Static Homepage Version) ---
+# --- START OF FILE app.py (Final, Fully Featured Version) ---
 
 import streamlit as st
 import os
@@ -40,6 +40,21 @@ def extract_json_from_text(text):
     if match: return match.group(1)
     return None
 
+# --- NEW: Function to display the footer ---
+def show_footer():
+    st.markdown("---")
+    st.markdown("""
+    <div class="footer">
+        <p>
+            <b>ResumeCraft AI</b> created by Vishvam — a B.Tech student passionate about AI and Web Development.
+            <br>
+            Connect with me on 
+            <a href="https://www.linkedin.com/in/your-linkedin-profile/" target="_blank">LinkedIn</a> | 
+            <a href="https://github.com/your-github-username" target="_blank">GitHub</a>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
 # --- Templates Dictionary ---
 templates = {
     "Corporate": ("template_oldmoney.html", "#8c7853"),
@@ -59,70 +74,70 @@ st.markdown("""
 .hero-container {
     padding: 5rem 2rem;
     text-align: center;
-    background: linear-gradient(45deg, #1a2a6c, #b21f1f, #fdbb2d); /* A more vibrant gradient */
+    background: linear-gradient(45deg, #1a2a6c, #b21f1f, #fdbb2d);
     border-radius: 16px;
     color: white;
 }
-.hero-container h1 {
-    font-size: 3.8rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-}
-.hero-container p {
-    font-size: 1.3rem;
-    max-width: 600px;
-    margin: 0 auto 2.5rem auto;
-    color: rgba(255, 255, 255, 0.9);
-}
+.hero-container h1 { font-size: 3.8rem; font-weight: 700; margin-bottom: 1rem; }
+.hero-container p { font-size: 1.3rem; max-width: 600px; margin: 0 auto 2.5rem auto; color: rgba(255, 255, 255, 0.9); }
 
-/* Builder Page Card Styling */
-.template-card {
-    border: 1px solid #e0e0e0;
-    padding: 1rem;
-    border-radius: 8px;
-    transition: all 0.3s ease-in-out;
+/* NEW: Styling for the Footer */
+.footer {
+    width: 100%;
     text-align: center;
+    padding: 2rem 1rem;
+    margin-top: 4rem;
+    border-top: 1px solid #e0e0e0;
+    color: #666;
+    font-size: 0.9rem;
 }
-.template-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.08);
+.footer a {
+    color: #3498db;
+    text-decoration: none;
+}
+.footer a:hover {
+    text-decoration: underline;
 }
 </style>
 """, unsafe_allow_html=True)
 
 
 # --- Main App Router ---
-# We use a URL query parameter to decide which page to show.
 query_params = st.query_params
 if query_params.get("page") == "builder":
     # --- BUILDER PAGE ---
     with st.sidebar:
-        st.title("📄 ResumeCraft AI")
-        st.markdown("Fill in your details, choose a style, and generate.")
+        # NEW: Back to Home button
+        st.link_button("← Back to Home", "/", use_container_width=True)
         st.divider()
-        st.subheader("1. Choose Your Style")
-        template_name = st.selectbox("Select a template:", templates.keys())
-        default_color = templates[template_name][1]
-        accent_color = st.color_picker("Select an accent color:", default_color)
-        st.divider()
-        st.subheader("2. Enter Your Information")
-        target_role = st.text_input("🎯 Target Job Role")
-        name = st.text_input("👤 Full Name")
-        email = st.text_input("📧 Email")
-        education_input = st.text_area("🎓 Education")
-        skills_input = st.text_area("🛠️ Skills")
-        projects_input = st.text_area("💼 Projects / Internships")
-        with st.expander("🧾 Work Experience (Optional)"):
-            experience_input = st.text_area("Enter work experience")
-        st.divider()
-        generate_button = st.button("🚀 Generate Resume", use_container_width=True)
+
+        # NEW: Wrapped in st.form
+        with st.form(key="resume_form"):
+            st.title("📄 ResumeCraft AI")
+            st.markdown("Fill in your details, choose a style, and generate.")
+            st.divider()
+            st.subheader("1. Choose Your Style")
+            template_name = st.selectbox("Select a template:", templates.keys())
+            default_color = templates[template_name][1]
+            accent_color = st.color_picker("Select an accent color:", default_color)
+            st.divider()
+            st.subheader("2. Enter Your Information")
+            target_role = st.text_input("🎯 Target Job Role")
+            name = st.text_input("👤 Full Name")
+            email = st.text_input("📧 Email")
+            education_input = st.text_area("🎓 Education")
+            skills_input = st.text_area("🛠️ Skills")
+            projects_input = st.text_area("💼 Projects / Internships")
+            with st.expander("🧾 Work Experience (Optional)"):
+                experience_input = st.text_area("Enter work experience")
+            st.divider()
+            # NEW: Form-specific submit button
+            generate_button = st.form_submit_button("🚀 Generate Resume", use_container_width=True)
     
     st.title("Your Generated Resume")
-    st.markdown('''Your resume will appear here once you click the generate button. 
-    Kindly fill in all the Details in The Sidebar.''')
+    st.markdown("Your resume will appear here once you click the generate button.")
     
     if generate_button:
-        # (The entire generation logic from our last version goes here)
         if not all([name, email, education_input, skills_input, projects_input]):
             st.warning("Please fill in all required fields in the sidebar.")
         else:
@@ -132,10 +147,6 @@ if query_params.get("page") == "builder":
                     json_prompt = f"""
                     Generate a resume as a JSON object based on these details: {user_data}.
                     The JSON object MUST have keys: "name", "email", "profile_summary", "education", "skills", "projects", "experience".
-                    - "education": ALWAYS a list of objects, each with "degree", "institution", and "year".
-                    - "skills": ALWAYS a list of strings.
-                    - "projects": ALWAYS a list of objects, each with "name" and "details" (a list of strings).
-                    - "experience": ALWAYS a list of objects.
                     If a section has no information, you MUST return an empty list [].
                     """
                     response = co.chat(model='command-r', message=json_prompt, temperature=0.1)
@@ -158,6 +169,8 @@ if query_params.get("page") == "builder":
                             st.download_button(label="📥 Download PDF Resume", data=pdf_bytes, file_name=f"{name.replace(' ', '_')}_Resume.pdf", mime="application/pdf")
                 except Exception as e:
                     st.error(f"❌ An unexpected error occurred: {e}")
+    
+    show_footer() # Add footer to builder page
 
 else:
     # --- HOMEPAGE (Default View) ---
@@ -171,7 +184,7 @@ else:
     </div>
     """, unsafe_allow_html=True)
     
-    st.write("") # Spacer
+    st.write("")
     
     st.markdown('<div class="fade-in-section">', unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
@@ -185,3 +198,5 @@ else:
         st.subheader("📥 Instant Download")
         st.write("Generate and download your resume as a pixel-perfect PDF, ready to send.")
     st.markdown('</div>', unsafe_allow_html=True)
+    
+    show_footer() # Add footer to homepage
