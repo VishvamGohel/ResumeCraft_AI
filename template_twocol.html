@@ -1,53 +1,52 @@
+<details>
+<summary><strong>Click to expand: `template_twocol.html` (Corrected)</strong></summary>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>{{ name }}'s Resume</title>
     <style>
-        @font-face { font-family: 'Lato'; /* ... */ }
-        @font-face { font-family: 'Raleway'; /* ... */ }
-        @font-face { font-family: 'Font Awesome 6 Free'; /* ... */ }
+        @font-face { font-family: 'Lato'; font-style: normal; font-weight: 400; src: url(https://fonts.gstatic.com/s/lato/v24/S6uyw4BMUTPHvxk.woff2) format('woff2'); }
+        @font-face { font-family: 'Lato'; font-style: normal; font-weight: 700; src: url(https://fonts.gstatic.com/s/lato/v24/S6u9w4BMUTPHh6Ueww.woff2) format('woff2'); }
+        @font-face { font-family: 'Raleway'; font-style: normal; font-weight: 400; src: url(https://fonts.gstatic.com/s/raleway/v28/1Ptxg8zYS_SKggPN4iEg.woff2) format('woff2'); }
+        @font-face { font-family: 'Raleway'; font-style: normal; font-weight: 700; src: url(https://fonts.gstatic.com/s/raleway/v28/1Ptxg8zYS_SKggPN4iEWqg.woff2) format('woff2'); }
+        @font-face { font-family: 'Font Awesome 6 Free'; font-style: normal; font-weight: 900; src: url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2) format('woff2'); }
 
         @page { size: A4; margin: 0; }
         body { font-family: 'Lato', sans-serif; color: #333; line-height: 1.5; margin: 0; }
         
-        /* --- KEY FIX: Use a wrapper to contain floated elements --- */
-        .container {
-            width: 210mm;
-            height: 297mm;
-            box-sizing: border-box;
-            overflow: hidden; /* This contains the floats */
-        }
-
-        .sidebar {
-            float: left; /* Use float instead of flex */
-            width: 35%;
-            height: 297mm; /* Full page height */
-            background-color: {{ accent_color | default('#3498db') }};
-            color: white;
-            padding: 10mm;
-            box-sizing: border-box;
-        }
-        .sidebar h1 { font-family: 'Raleway', sans-serif; /* ... */ }
-        /* ... other sidebar styles */
-
-        .main-content {
-            float: left; /* Use float instead of flex */
-            width: 65%;
-            padding: 10mm;
-            box-sizing: border-box;
-        }
-        /* ... other main content styles */
-        
-        .entry { page-break-inside: avoid; /* ... */ }
-        .fa-icon { font-family: 'Font Awesome 6 Free'; /* ... */ }
+        .container { width: 210mm; height: 297mm; box-sizing: border-box; overflow: hidden; }
+        .sidebar { float: left; width: 35%; height: 297mm; background-color: {{ accent_color | default('#3498db') }}; color: white; padding: 10mm; box-sizing: border-box; }
+        .sidebar h1 { font-family: 'Raleway', sans-serif; font-size: 2.2em; margin: 0 0 10px 0; line-height: 1.2; word-wrap: break-word; }
+        .sidebar .contact-info p { margin: 5px 0; word-wrap: break-word; }
+        .sidebar .contact-info a { color: white; text-decoration: none; }
+        .sidebar h2 { font-family: 'Raleway', sans-serif; border-bottom: 1px solid rgba(255,255,255,0.5); padding-bottom: 5px; font-size: 1.2em; margin-top: 20px; }
+        .sidebar ul { list-style: none; padding: 0; }
+        .main-content { float: left; width: 65%; padding: 10mm; box-sizing: border-box; }
+        .main-content h2 { font-family: 'Raleway', sans-serif; color: {{ accent_color | default('#3498db') }}; border-bottom: 1px solid #eee; padding-bottom: 5px; font-size: 1.2em; }
+        .entry { margin-bottom: 15px; page-break-inside: avoid; }
+        .entry h3 { margin: 0; font-size: 1.1em; color: #2c3e50; }
+        .entry p { margin: 0; font-style: italic; color: #666; font-size: 0.9em; }
+        .entry ul { padding-left: 20px; margin: 5px 0 0 0; }
+        .entry li { font-size: 0.95em; }
+        .fa-icon { font-family: 'Font Awesome 6 Free'; font-weight: 900; margin-right: 8px; }
     </style>
 </head>
 <body>
-    <!-- The HTML structure remains the same -->
     <div class="container">
-        <div class="sidebar"> ... </div>
-        <div class="main-content"> ... </div>
+        <div class="sidebar">
+            <h1>{{ name }}</h1>
+            <div class="contact-info"><p><span class="fa-icon"></span><a href="mailto:{{ email }}">{{ email }}</a></p></div>
+            <div class="section"><h2><span class="fa-icon"></span>Skills</h2><ul>{% for skill in skills %}<li>{{ skill }}</li>{% endfor %}</ul></div>
+            <div class="section"><h2><span class="fa-icon"></span>Education</h2>{% for edu in education %}<div class="entry"><h3>{{ edu.degree }}</h3><p>{{ edu.institution }}<br>{{ edu.year }}</p></div>{% endfor %}</div>
+        </div>
+        <div class="main-content">
+            <div class="section"><h2><span class="fa-icon"></span>Projects</h2>{% for proj in projects %}<div class="entry"><h3>{{ proj.name }}</h3><ul>{% for detail in proj.details %}<li>{{ detail }}</li>{% endfor %}</ul></div>{% endfor %}</div>
+            {% if experience %}<div class="section"><h2><span class="fa-icon"></span>Experience</h2>{% for exp in experience %}<div class="entry"><h3>{{ exp.title }} at {{ exp.company }}</h3><p>{{ exp.duration }}</p><ul>{% for detail in exp.details %}<li>{{ detail }}</li>{% endfor %}</ul></div>{% endfor %}</div>{% endif %}
+        </div>
     </div>
 </body>
 </html>
+Use code with caution.
+Html
+</details>
