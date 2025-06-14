@@ -1,4 +1,4 @@
-# --- START OF FILE app.py (Simple & Stable Version) ---
+# --- START OF FILE app.py (Stable Sidebar Version) ---
 
 import streamlit as st
 import os
@@ -17,7 +17,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 @st.cache_data
 def load_api_key():
     try: return st.secrets["COHERE_API_KEY"]
-    except:
+    except (KeyError, FileNotFoundError):
         load_dotenv(os.path.join(BASE_DIR, "app.env"))
         return os.getenv("COHERE_API_KEY")
 
@@ -39,53 +39,86 @@ def html_to_pdf(html_string):
 def extract_json_from_text(text):
     # This regex finds a JSON object within ```json ... ```
     match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if match:
-        return match.group(1)
-    # Fallback to find any JSON object if the markdown is missing
+    if match: return match.group(1)
+    # Fallback to find any JSON object
     match = re.search(r"(\{.*?\})", text, re.DOTALL)
-    if match:
-        return match.group(1)
+    if match: return match.group(1)
     return None
 
-# --- Sidebar UI ---
-with st.sidebar:
-    st.title("📝 ResumeCraft AI")
-    st.markdown("Enter your details below.")
-    target_role = st.text_input("🎯 Target Job Role", value="Software Engineer")
-    name = st.text_input("👤 Full Name", value="Jane Doe")
-    email = st.text_input("📧 Email", value="jane.doe@example.com")
-    education_input = st.text_area("🎓 Education", value="M.S. in Computer Science, Stanford University, 2024")
-    skills_input = st.text_area("🛠️ Skills", value="Python, Java, Cloud Computing, System Design")
-    projects_input = st.text_area("💼 Projects", value="Developed a full-stack web application for task management using React and Node.js.")
-    experience_input = st.text_area("🧾 Work Experience (Optional)", value="Software Engineering Intern at Tech Corp (Summer 2023) - Worked on the backend services for the main product.")
+# --- Templates Dictionary ---
+templates = {
+    "Corporate": ("template_oldmoney.html", "#8c7853"),
+    "Modern": ("template_twocol.html", "#3498db"),
+    "Aesthetic": ("template_aesthetic.html", "#bcaaa4"),
+    "Classic": ("template.html", "#2c3e50")
+}
 
+# --- UI: Sidebar for All Inputs ---
+with st.sidebar:
+    st.title("📄 ResumeCraft AI")
+    st.markdown("Fill in your details, choose a style, and generate your resume.")
+    st.divider()
+
+    # --- Step 1: Choose Style ---
+    st.subheader("1. Choose Your Style")
+    template_name = st.selectbox(
+        "Select a template:",
+        templates.keys()
+    )
+    
+    # Intelligently get the default color for the chosen template
+    default_color = templates[template_name][1]
+    accent_color = st.color_picker("Select an accent color:", default_color)
+
+    st.divider()
+
+    # --- Step 2: Enter Information ---
+    st.subheader("2. Enter Your Information")
+    target_role = st.text_input("🎯 Target Job Role", placeholder="e.g., 'Data Analyst'")
+    name = st.text_input("👤 Full Name")
+    email = st.text_input("📧 Email")
+    education_input = st.text_area("🎓 Education", placeholder="B.S. in Computer Science, Stanford, 2024")
+    skills_input = st.text_area("🛠️ Skills", placeholder="Python, SQL, Data Visualization...")
+    projects_input = st.text_area("💼 Projects / Internships", placeholder="Developed a sentiment analysis tool...")
+    with st.expander("🧾 Work Experience (Optional)"):
+        experience_input = st.text_area("Enter work experience")
+
+    st.divider()
+
+    # --- Step 3: Generate ---
     generate_button = st.button("🚀 Generate Resume", use_container_width=True)
+
 
 # --- Main App Body ---
 st.title("Your Generated Resume")
-st.markdown("Your resume will appear here once you click the generate button.")
+st.markdown("Your resume will appear here once you click the generate button in the sidebar.")
 
 if generate_button:
     if not all([name, email, education_input, skills_input, projects_input]):
         st.warning("Please fill in all required fields in the sidebar.")
     else:
-        with st.spinner("AI is crafting your resume..."):
+        with st.spinner("AI is crafting your signature resume..."):
             try:
+                # Get the chosen template's filename
+                template_filename = templates[template_name][0]
+                
                 user_data = {
                     "target_role": target_role, "name": name, "email": email,
                     "education_input": education_input, "skills_input": skills_input,
                     "projects_input": projects_input, "experience_input": experience_input
                 }
-                
-                # A very direct and structured prompt
+
+                # --- A very robust prompt to get the correct data structure ---
                 json_prompt = f"""
-                Create a resume as a JSON object. The JSON object must have keys: "name", "email", "profile_summary", "education", "skills", "projects", "experience".
-                - The value for "education" must be a list of objects, each with "degree", "institution", and "year".
-                - The value for "skills" must be a list of strings.
-                - The value for "projects" must be a list of objects, each with "name" and "details" (which is a list of strings).
-                - The value for "experience" must be a list of objects, each with "title", "company", "duration", and "details" (a list of strings).
-                If a section is empty, provide an empty list [].
-                Based on these details: {user_data}
+                Generate a resume as a JSON object based on these details: {user_data}.
+                The JSON object MUST have these top-level keys: "name", "email", "profile_summary", "education", "skills", "projects", "experience".
+                - "profile_summary": A 1-2 sentence professional summary tailored to the target role.
+                - "education": ALWAYS a list of objects. Each object MUST have "degree", "institution", and "year".
+                - "skills": ALWAYS a list of strings.
+                - "projects": ALWAYS a list of objects. Each object MUST have "name" and "details" (a list of strings).
+                - "experience": ALWAYS a list of objects. Each object MUST have "title", "company", "duration", and "details" (a list of strings).
+                If a section has no information, you MUST return an empty list [], for example: "experience": []. Do not omit any keys.
+                Wrap the entire response in a single ```json ... ``` block.
                 """
                 
                 response = co.chat(model='command-r', message=json_prompt, temperature=0.1)
@@ -98,33 +131,34 @@ if generate_button:
                 else:
                     resume_data = json.loads(json_string)
                     
-                    # Ensure all keys exist before passing to template
-                    for key in ['name', 'email', 'profile_summary', 'education', 'skills', 'projects', 'experience']:
-                        if key not in resume_data:
-                            resume_data[key] = [] if isinstance(resume_data.get(key), list) else ""
-
-                    env = Environment(loader=FileSystemLoader(BASE_DIR))
-                    template = env.get_template("template_oldmoney.html") # Using the most stable template
-                    
-                    html_out = template.render(resume_data, accent_color="#8c7853")
-                    
-                    pdf_bytes = html_to_pdf(html_out)
-
-                    if pdf_bytes:
-                        st.success("🎉 Your resume is ready!")
-                        st.balloons()
+                    # Simple check to ensure data is not empty before rendering
+                    if not resume_data.get("name"):
+                        st.error("AI Data Error: The generated data is empty. The AI might be having trouble. Please try again.")
+                        st.json(resume_data)
+                    else:
+                        env = Environment(loader=FileSystemLoader(BASE_DIR))
+                        template = env.get_template(template_filename)
                         
-                        st.subheader("📄 PDF Preview")
-                        st.components.v1.html(html_out, height=800, scrolling=True)
+                        # Pass the accent color to the template
+                        html_out = template.render(resume_data, accent_color=accent_color)
+                        
+                        pdf_bytes = html_to_pdf(html_out)
 
-                        st.download_button(
-                            label="📥 Download PDF Resume",
-                            data=pdf_bytes,
-                            file_name=f"{name.replace(' ', '_')}_Resume.pdf",
-                            mime="application/pdf"
-                        )
+                        if pdf_bytes:
+                            st.success("🎉 Your professional resume is ready!")
+                            st.balloons()
+                            
+                            st.subheader("📄 PDF Preview")
+                            st.components.v1.html(html_out, height=800, scrolling=True)
+
+                            st.download_button(
+                                label="📥 Download PDF Resume",
+                                data=pdf_bytes,
+                                file_name=f"{name.replace(' ', '_')}_Resume.pdf",
+                                mime="application/pdf"
+                            )
 
             except Exception as e:
                 st.error(f"❌ An unexpected error occurred: {e}")
                 if 'response' in locals():
-                    st.text_area("AI Raw Output for Debugging", response.text, key="error_debug_2")
+                    st.text_area("AI Raw Output for Debugging", response.text, key="error_debug_final")
