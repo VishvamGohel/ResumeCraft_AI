@@ -118,7 +118,7 @@ if query_params.get("page") == "builder":
         generate_button = st.button("🚀 Generate Resume", use_container_width=True)
     
     st.title("Your Generated Resume")
-    st.markdown("Your resume will appear here once you click the generate button.")
+    st.markdown("Your resume will appear here once you click the generate button. Kindly fill in all the Details in The Sidebar.")
     
     if generate_button:
         # (The entire generation logic from our last version goes here)
