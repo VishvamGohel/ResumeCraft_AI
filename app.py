@@ -49,8 +49,8 @@ def show_footer():
             <b>ResumeCraft AI</b> created by Vishvam — a B.Tech student passionate about AI and Web Development.
             <br>
             Connect with me on 
-            <a href="https://www.linkedin.com/in/your-linkedin-profile/" target="_blank">LinkedIn</a> | 
-            <a href="https://github.com/your-github-username" target="_blank">GitHub</a>
+            <a href="https://github.com/VishvamGohel" target="_blank">GitHub</a> |
+            <a href="mailto:vishvamgohel2007@gmail.com">Email</a> 
         </p>
     </div>
     """, unsafe_allow_html=True)
