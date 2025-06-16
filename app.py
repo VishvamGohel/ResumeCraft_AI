@@ -143,7 +143,7 @@ if query_params.get("page") == "builder":
             generate_button = st.form_submit_button("🚀 Generate Resume", use_container_width=True)
     
     st.title("Your Generated Resume")
-    st.markdown("Your resume will appear here once you click the generate button.")
+    st.markdown("Your resume will appear here once you click the generate button. Kindly enter your information in the sidebar.")
     
     if generate_button:
         if not all([name, email, education_input, skills_input, projects_input]):
