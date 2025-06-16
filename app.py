@@ -67,16 +67,20 @@ def validate_and_correct_data(data):
         
     return data
 
+# --- Find this function in your app.py ---
+
+# --- CORRECTED: Function to display the footer with centered text ---
 def show_footer():
-    st.markdown("---")
+    st.markdown("---") # Visual separator
+    # The only change is adding a styled div around the <p> tag
     st.markdown("""
-    <div class="footer">
+    <div style="text-align: center; padding: 2rem 1rem; color: #666; font-size: 0.9rem;">
         <p>
             <b>ResumeCraft AI</b> created by Vishvam — a B.Tech student passionate about AI and Web Development.
             <br>
             Connect with me on 
-            <a href="mailto:your.email@gmail.com">Email</a> | 
-            <a href="https://github.com/your-github-username" target="_blank">GitHub</a>
+            <a href="mailto:vishvamgohel2007@gmail.com" style="color: #3498db; text-decoration: none; font-weight: bold;">Email</a> | 
+            <a href="https://github.com/VishvamGohel" target="_blank" style="color: #3498db; text-decoration: none; font-weight: bold;">GitHub</a>
         </p>
     </div>
     """, unsafe_allow_html=True)
