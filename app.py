@@ -67,6 +67,20 @@ def validate_and_correct_data(data):
         
     return data
 
+def show_footer():
+    st.markdown("---")
+    st.markdown("""
+    <div class="footer">
+        <p>
+            <b>ResumeCraft AI</b> created by Vishvam — a B.Tech student passionate about AI and Web Development.
+            <br>
+            Connect with me on 
+            <a href="mailto:your.email@gmail.com">Email</a> | 
+            <a href="https://github.com/your-github-username" target="_blank">GitHub</a>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
 # --- Templates Dictionary ---
 templates = {
     "Corporate": ("template_oldmoney.html", "#8c7853"),
@@ -169,6 +183,7 @@ if query_params.get("page") == "builder":
                     st.error(f"❌ An unexpected error occurred: {e}")
                     if 'response' in locals():
                         st.text_area("AI Raw Output for Debugging", response.text)
+    show_footer()     
 
 else:
     # --- HOMEPAGE (Default View) ---
@@ -196,3 +211,5 @@ else:
         st.subheader("📥 Instant Download")
         st.write("Generate and download your resume as a pixel-perfect PDF, ready to send.")
     st.markdown('</div>', unsafe_allow_html=True)
+
+    show_footer()
