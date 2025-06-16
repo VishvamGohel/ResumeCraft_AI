@@ -1,4 +1,4 @@
-# --- START OF FILE app.py (Final, Fully Featured Version) ---
+# --- START OF FILE app.py (Final, Fully Corrected Version) ---
 
 import streamlit as st
 import os
@@ -40,20 +40,32 @@ def extract_json_from_text(text):
     if match: return match.group(1)
     return None
 
-# --- NEW: Function to display the footer ---
-def show_footer():
-    st.markdown("---")
-    st.markdown("""
-    <div class="footer">
-        <p>
-            <b>ResumeCraft AI</b> created by Vishvam — a B.Tech student passionate about AI and Web Development.
-            <br>
-            Connect with me on 
-            <a href="https://github.com/VishvamGohel" target="_blank">GitHub</a> |
-            <a href="mailto:vishvamgohel2007@gmail.com">Email</a> 
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+def validate_and_correct_data(data):
+    """
+    Checks the AI's output and robustly fixes common structural mistakes,
+    ensuring the data perfectly matches the template's expectations.
+    """
+    # Ensure all top-level keys exist and default to empty lists if appropriate
+    for key in ['education', 'skills', 'projects', 'experience']:
+        if key not in data or not isinstance(data.get(key), list):
+            data[key] = []
+
+    # Safely check and correct the 'projects' structure
+    if data['projects'] and isinstance(data['projects'][0], str):
+        data['projects'] = [{"name": f"Project {i+1}", "details": [item]} for i, item in enumerate(data['projects'])]
+
+    # Safely check and correct the 'education' structure
+    if data['education'] and isinstance(data['education'][0], str):
+        corrected_education = []
+        for item in data['education']:
+            parts = [p.strip() for p in item.split(',')]
+            degree = parts[0] if len(parts) > 0 else "Degree"
+            institution = parts[1] if len(parts) > 1 else "Institution"
+            year = parts[2] if len(parts) > 2 else "Year"
+            corrected_education.append({"degree": degree, "institution": institution, "year": year})
+        data['education'] = corrected_education
+        
+    return data
 
 # --- Templates Dictionary ---
 templates = {
@@ -80,24 +92,6 @@ st.markdown("""
 }
 .hero-container h1 { font-size: 3.8rem; font-weight: 700; margin-bottom: 1rem; }
 .hero-container p { font-size: 1.3rem; max-width: 600px; margin: 0 auto 2.5rem auto; color: rgba(255, 255, 255, 0.9); }
-
-/* NEW: Styling for the Footer */
-.footer {
-    width: 100%;
-    text-align: center;
-    padding: 2rem 1rem;
-    margin-top: 4rem;
-    border-top: 1px solid #e0e0e0;
-    color: #666;
-    font-size: 0.9rem;
-}
-.footer a {
-    color: #3498db;
-    text-decoration: none;
-}
-.footer a:hover {
-    text-decoration: underline;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -107,11 +101,8 @@ query_params = st.query_params
 if query_params.get("page") == "builder":
     # --- BUILDER PAGE ---
     with st.sidebar:
-        # NEW: Back to Home button
         st.link_button("← Back to Home", "/", use_container_width=True)
         st.divider()
-
-        # NEW: Wrapped in st.form
         with st.form(key="resume_form"):
             st.title("📄 ResumeCraft AI")
             st.markdown("Fill in your details, choose a style, and generate.")
@@ -131,7 +122,6 @@ if query_params.get("page") == "builder":
             with st.expander("🧾 Work Experience (Optional)"):
                 experience_input = st.text_area("Enter work experience")
             st.divider()
-            # NEW: Form-specific submit button
             generate_button = st.form_submit_button("🚀 Generate Resume", use_container_width=True)
     
     st.title("Your Generated Resume")
@@ -147,6 +137,10 @@ if query_params.get("page") == "builder":
                     json_prompt = f"""
                     Generate a resume as a JSON object based on these details: {user_data}.
                     The JSON object MUST have keys: "name", "email", "profile_summary", "education", "skills", "projects", "experience".
+                    - "education" MUST be a list of objects, each with "degree", "institution", and "year".
+                    - "skills" MUST be a list of strings.
+                    - "projects" MUST be a list of objects, each with "name" key (e.g., "Project Title") and "details" key (a list of strings).
+                    - "experience" MUST be a list of objects.
                     If a section has no information, you MUST return an empty list [].
                     """
                     response = co.chat(model='command-r', message=json_prompt, temperature=0.1)
@@ -156,10 +150,14 @@ if query_params.get("page") == "builder":
                         st.text_area("AI Raw Output", response.text)
                     else:
                         resume_data = json.loads(json_string)
+                        
+                        # Use the robust validation function
+                        corrected_data = validate_and_correct_data(resume_data)
+
                         template_filename = templates[template_name][0]
                         env = Environment(loader=FileSystemLoader(BASE_DIR))
                         template = env.get_template(template_filename)
-                        html_out = template.render(resume_data, accent_color=accent_color)
+                        html_out = template.render(corrected_data, accent_color=accent_color)
                         pdf_bytes = html_to_pdf(html_out)
                         if pdf_bytes:
                             st.success("🎉 Your professional resume is ready!")
@@ -169,8 +167,8 @@ if query_params.get("page") == "builder":
                             st.download_button(label="📥 Download PDF Resume", data=pdf_bytes, file_name=f"{name.replace(' ', '_')}_Resume.pdf", mime="application/pdf")
                 except Exception as e:
                     st.error(f"❌ An unexpected error occurred: {e}")
-    
-    show_footer() # Add footer to builder page
+                    if 'response' in locals():
+                        st.text_area("AI Raw Output for Debugging", response.text)
 
 else:
     # --- HOMEPAGE (Default View) ---
@@ -198,5 +196,3 @@ else:
         st.subheader("📥 Instant Download")
         st.write("Generate and download your resume as a pixel-perfect PDF, ready to send.")
     st.markdown('</div>', unsafe_allow_html=True)
-    
-    show_footer() # Add footer to homepage
