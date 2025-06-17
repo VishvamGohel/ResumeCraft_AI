@@ -1,4 +1,4 @@
-# --- START OF FILE app.py (Final, Simplified Text-Only Header) ---
+# --- START OF FILE app.py (Final Version with White Preview Backgrounds) ---
 
 import streamlit as st
 import os
@@ -13,8 +13,7 @@ import base64
 
 # --- Configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# LOGO IS NO LONGER USED
-# LOGO_PATH = os.path.join(BASE_DIR, "logo.svg")
+LOGO_PATH = os.path.join(BASE_DIR, "logo.svg") # Although not used in header, can be used for favicon
 
 st.set_page_config(page_title="ResumeCraft AI", page_icon="✨", layout="wide")
 
@@ -40,11 +39,8 @@ def extract_json_from_text(text):
     st.code(text)
     return None
 
-# The get_image_as_base64 function is no longer needed
-
 # --- Persistent Header and Footer ---
 def show_persistent_header():
-    # This is the most reliable way to remove the space at the top of the page
     st.markdown("""
         <style>
                .block-container {
@@ -53,7 +49,6 @@ def show_persistent_header():
         </style>
         """, unsafe_allow_html=True)
 
-    # Centered, text-only header
     st.markdown("""
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
@@ -67,7 +62,6 @@ def show_persistent_header():
                 font-weight: 700;
                 text-decoration: none;
             }
-            /* Adaptive Colors */
             body.theme-light .custom-header a { color: #262730; }
             body.theme-dark .custom-header a { color: #FAFAFA; }
         </style>
@@ -76,9 +70,7 @@ def show_persistent_header():
         </div>
     """, unsafe_allow_html=True)
 
-
 def show_footer():
-    # Footer no longer needs the logo
     st.markdown("---")
     st.markdown(f"""
     <div style="text-align: center; padding: 2rem 1rem; color: #666; font-size: 0.9rem;">
@@ -101,7 +93,6 @@ co = get_cohere_client(api_key)
 
 show_persistent_header()
 
-# (The rest of the code is identical)
 # --- Data Dictionaries ---
 templates = {
     "Corporate": ("template_oldmoney.html", "#8c7853"), "Modern": ("template_twocol.html", "#3498db"),
@@ -279,7 +270,9 @@ elif page == "templates":
         with preview_col:
             st.subheader("📄 Preview")
             if 'html_out' in locals() and html_out:
-                st.components.v1.html(html_out, height=800, scrolling=True)
+                # --- FIX: Wrapped the preview HTML in a styled div for a white background ---
+                styled_preview = f'<div style="background-color:white; border-radius: 8px; padding: 25px; border: 1px solid #ddd;">{html_out}</div>'
+                st.components.v1.html(styled_preview, height=800, scrolling=True)
     show_footer()
 
 elif page == "demo":
@@ -294,7 +287,10 @@ elif page == "demo":
             env = Environment(loader=FileSystemLoader(BASE_DIR))
             template = env.get_template(filename)
             html_out = template.render(sample_data, accent_color=color)
-            st.components.v1.html(html_out, height=450, scrolling=True)
+            
+            # --- FIX: Wrapped the demo HTML in a styled div for a white background ---
+            styled_demo = f'<div style="background-color:white; border-radius: 8px; padding: 25px; border: 1px solid #ddd;">{html_out}</div>'
+            st.components.v1.html(styled_demo, height=450, scrolling=True)
             st.link_button(f"Create with this Style →", f"?page=builder", use_container_width=True)
 
     row1_col1, row1_col2 = st.columns(2)
