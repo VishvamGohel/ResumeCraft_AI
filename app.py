@@ -1,4 +1,4 @@
-# --- START OF FILE app.py (Final Version with Adaptive & Sticky Header) ---
+# --- START OF FILE app.py (Final, Simplified Text-Only Header) ---
 
 import streamlit as st
 import os
@@ -13,9 +13,10 @@ import base64
 
 # --- Configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOGO_PATH = os.path.join(BASE_DIR, "logo.svg")
+# LOGO IS NO LONGER USED
+# LOGO_PATH = os.path.join(BASE_DIR, "logo.svg")
 
-st.set_page_config(page_title="ResumeCraft AI", page_icon=LOGO_PATH if os.path.exists(LOGO_PATH) else "✨", layout="wide")
+st.set_page_config(page_title="ResumeCraft AI", page_icon="✨", layout="wide")
 
 # --- Helper Functions ---
 @st.cache_data
@@ -39,93 +40,48 @@ def extract_json_from_text(text):
     st.code(text)
     return None
 
-def get_image_as_base64(path):
-    if not os.path.exists(path):
-        return None
-    with open(path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode()
+# The get_image_as_base64 function is no longer needed
 
 # --- Persistent Header and Footer ---
 def show_persistent_header():
-    logo_b64 = get_image_as_base64(LOGO_PATH)
-
-    st.markdown(f"""
+    # This is the most reliable way to remove the space at the top of the page
+    st.markdown("""
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
-
-            [data-testid="stHeader"] {{
-                display: none !important;
-            }}
-
-            .app-header {{
-                /* This ensures it sticks to the top */
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 70px;
-                background-color: transparent;
-                padding: 0 2rem;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 99999;
-            }}
-            .header-logo-link {{
-                display: flex;
-                align-items: center;
-                text-decoration: none;
-            }}
-            .header-logo-link img {{
-                height: 40px;
-                width: auto;
-                margin-right: 10px;
-            }}
-            .header-logo-link h2 {{
-                font-family: 'Montserrat', sans-serif;
-                font-weight: 600;
-                margin: 0;
-                font-size: 1.8rem;
-            }}
-            .main .block-container {{
-                padding-top: 80px !important;
-            }}
-
-            /* --- ADAPTIVE THEME CHANGE: Default colors for light theme --- */
-            body.theme-light .header-logo-link,
-            body.theme-light .header-logo-link h2 {{
-                color: #262730; /* Dark grey for light background */
-            }}
-
-            /* --- ADAPTIVE THEME CHANGE: Override colors for dark theme --- */
-            body.theme-dark .header-logo-link,
-            body.theme-dark .header-logo-link h2 {{
-                color: #FAFAFA; /* Off-white for dark background */
-            }}
+               .block-container {
+                    padding-top: 2rem;
+                }
         </style>
         """, unsafe_allow_html=True)
 
-    logo_html = ""
-    if logo_b64:
-        logo_html = f'<img src="data:image/svg+xml;base64,{logo_b64}">'
-    else:
-        logo_html = '<span style="font-size: 2rem; margin-right: 10px;">✨</span>'
-
-    st.markdown(f"""
-        <div class="app-header">
-            <a href="/?page=home" target="_self" class="header-logo-link">
-                {logo_html}
-                <h2>ResumeCraft AI</h2>
-            </a>
+    # Centered, text-only header
+    st.markdown("""
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
+            .custom-header {
+                text-align: center;
+                margin-bottom: 2rem;
+            }
+            .custom-header a {
+                font-family: 'Montserrat', sans-serif;
+                font-size: 2.5rem;
+                font-weight: 700;
+                text-decoration: none;
+            }
+            /* Adaptive Colors */
+            body.theme-light .custom-header a { color: #262730; }
+            body.theme-dark .custom-header a { color: #FAFAFA; }
+        </style>
+        <div class="custom-header">
+            <a href="/?page=home" target="_self">ResumeCraft AI</a>
         </div>
-        """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+
 
 def show_footer():
-    logo_b64 = get_image_as_base64(LOGO_PATH)
+    # Footer no longer needs the logo
     st.markdown("---")
     st.markdown(f"""
     <div style="text-align: center; padding: 2rem 1rem; color: #666; font-size: 0.9rem;">
-        {f'<img src="data:image/svg+xml;base64,{logo_b64}" width="30" style="margin-bottom: 10px;">' if logo_b64 else ''}
         <p>
             <b>ResumeCraft AI</b> created by Vishvam — a B.Tech student passionate about AI and Web Development.
             <br>
@@ -145,7 +101,7 @@ co = get_cohere_client(api_key)
 
 show_persistent_header()
 
-# (The rest of the code remains the same)
+# (The rest of the code is identical)
 # --- Data Dictionaries ---
 templates = {
     "Corporate": ("template_oldmoney.html", "#8c7853"), "Modern": ("template_twocol.html", "#3498db"),
