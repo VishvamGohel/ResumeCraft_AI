@@ -1,4 +1,4 @@
-# --- START OF FILE app.py (Final Version with White Preview Backgrounds) ---
+# --- START OF FILE app.py (Final Version with Styled Feedback) ---
 
 import streamlit as st
 import os
@@ -9,12 +9,14 @@ import cohere
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 import copy
-import base64
+from datetime import datetime
+
+# --- Correct imports for gspread ---
+import gspread
+from google.oauth2.service_account import Credentials
 
 # --- Configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOGO_PATH = os.path.join(BASE_DIR, "logo.svg") # Although not used in header, can be used for favicon
-
 st.set_page_config(page_title="ResumeCraft AI", page_icon="✨", layout="wide")
 
 # --- Helper Functions ---
@@ -39,7 +41,7 @@ def extract_json_from_text(text):
     st.code(text)
     return None
 
-# --- Persistent Header and Footer ---
+# --- UI Components (Header, Footer, Feedback) ---
 def show_persistent_header():
     st.markdown("""
         <style>
@@ -70,6 +72,107 @@ def show_persistent_header():
         </div>
     """, unsafe_allow_html=True)
 
+# --- REVISED: display_feedback_dialog function with custom styling ---
+def display_feedback_dialog():
+    @st.dialog("Share Your Feedback")
+    def feedback_form():
+        # --- NEW: Inject CSS for our custom question labels ---
+        st.markdown("""
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+            .feedback-question-label {
+                font-family: 'Poppins', sans-serif; /* Use the new font */
+                font-weight: 600; /* Bolder weight */
+                font-size: 1.1rem; /* Slightly larger size */
+                margin-bottom: 0.5rem; /* Add some space below the question */
+            }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        st.write("Your resume is ready! Please take a moment to help us improve.")
+        st.divider()
+
+        # --- NEW: Use st.markdown with our custom class for the label ---
+        st.markdown('<p class="feedback-question-label">How clear were the instructions and steps?</p>', unsafe_allow_html=True)
+        clarity_rating = st.slider(
+            "How clear were the instructions and steps?", # This label is now hidden
+            min_value=1, max_value=5, value=4,
+            help="1 = Very Confusing, 5 = Very Clear",
+            label_visibility="collapsed" # --- THIS HIDES THE DEFAULT LABEL ---
+        )
+        
+        st.markdown('<p class="feedback-question-label">How happy are you with your final resume PDF?</p>', unsafe_allow_html=True)
+        satisfaction_rating = st.slider(
+            "How happy are you with your final resume PDF?",
+            min_value=1, max_value=5, value=4,
+            help="1 = Very Unhappy, 5 = Very Happy",
+            label_visibility="collapsed"
+        )
+
+        st.markdown('<p class="feedback-question-label">What was your favorite feature?</p>', unsafe_allow_html=True)
+        favorite_feature = st.selectbox(
+            "What was your favorite feature?",
+            options=[
+                "The AI-powered content enhancement",
+                "The 'Tailor to Job Description' option",
+                "The selection of templates",
+                "The overall speed and ease-of-use",
+                "Other"
+            ],
+            index=0,
+            label_visibility="collapsed"
+        )
+        
+        st.markdown('<p class="feedback-question-label">Would you recommend ResumeCraft AI to a friend?</p>', unsafe_allow_html=True)
+        would_recommend = st.radio(
+            "Would you recommend ResumeCraft AI to a friend?",
+            options=["Yes", "No"],
+            horizontal=True,
+            label_visibility="collapsed"
+        )
+
+        st.markdown('<p class="feedback-question-label">What is one thing we could improve? (optional)</p>', unsafe_allow_html=True)
+        improvement_suggestion = st.text_area(
+            "What is one thing we could improve? (optional)",
+            label_visibility="collapsed"
+            )
+
+        st.markdown("<br>", unsafe_allow_html=True) # Add some space before the button
+
+        if st.button("Submit Feedback", use_container_width=True, type="primary"):
+            try:
+                scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                creds = Credentials.from_service_account_info(
+                    st.secrets["gspread_credentials"], scopes=scopes
+                )
+                client = gspread.authorize(creds)
+                
+                sheet = client.open("ResumeCraft-Feedback").worksheet("Sheet1") # Remember to use your real sheet name
+                
+                new_row = [
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    clarity_rating,
+                    satisfaction_rating,
+                    favorite_feature,
+                    would_recommend,
+                    improvement_suggestion
+                ]
+                
+                sheet.append_row(new_row)
+                st.toast("Thank you!", icon="🎉")
+                
+            except gspread.exceptions.SpreadsheetNotFound:
+                st.error("Feedback system error: The Google Sheet was not found. Please check the sheet name.")
+            except gspread.exceptions.APIError:
+                st.error("Feedback system error: A Google API error occurred. Likely a permissions issue.")
+            except Exception as e:
+                st.error(f"Could not submit feedback. Error: {e}")
+            
+            st.rerun()
+
+    feedback_form()
+
+
 def show_footer():
     st.markdown("---")
     st.markdown(f"""
@@ -93,7 +196,7 @@ co = get_cohere_client(api_key)
 
 show_persistent_header()
 
-# --- Data Dictionaries ---
+# --- Data Dictionaries, State, and Routing ---
 templates = {
     "Corporate": ("template_oldmoney.html", "#8c7853"), "Modern": ("template_twocol.html", "#3498db"),
     "Aesthetic": ("template_aesthetic.html", "#bcaaa4"), "Classic": ("template.html", "#2c3e50")
@@ -107,15 +210,13 @@ sample_data = {
     "experience": [{"title": "Software Development Intern", "company": "Innovatech Solutions", "duration": "Summer 2023", "details": ["Contributed to the development of a client-facing analytics dashboard, increasing user engagement by 15%."]}]
 }
 
-# --- Initialize Session State ---
-if 'user_data' not in st.session_state:
-    st.session_state.user_data = {}
-if 'resume_data' not in st.session_state:
-    st.session_state.resume_data = {}
+if 'user_data' not in st.session_state: st.session_state.user_data = {}
+if 'resume_data' not in st.session_state: st.session_state.resume_data = {}
+if 'feedback_triggered' not in st.session_state: st.session_state.feedback_triggered = False
 
-# --- Main App Router ---
 page = st.query_params.get("page", "home")
 
+# --- Page Rendering Logic ---
 if page == "builder":
     st.markdown("### **Step 1:** Your Details")
     st.caption("Fill in your information below. The AI will automatically enhance and structure it for you.")
@@ -198,18 +299,15 @@ elif page == "review":
         edited_data['name'] = st.text_input("Full Name", value=edited_data.get('name', ''))
         edited_data['email'] = st.text_input("Email", value=edited_data.get('email', ''))
         edited_data['profile_summary'] = st.text_area("Profile Summary", value=edited_data.get('profile_summary', ''), height=120)
-
         st.subheader("Skills")
         skills_string = "\n".join(edited_data.get('skills', []))
         edited_skills_string = st.text_area("Skills (one skill per line)", value=skills_string, height=150)
-
         st.subheader("Education")
         for i, edu in enumerate(edited_data.get('education', [])):
             with st.container(border=True):
                 edu['degree'] = st.text_input(f"Degree {i+1}", value=edu.get('degree', ''), key=f"edu_deg_{i}")
                 edu['institution'] = st.text_input(f"Institution {i+1}", value=edu.get('institution', ''), key=f"edu_inst_{i}")
                 edu['year'] = st.text_input(f"Year {i+1}", value=edu.get('year', ''), key=f"edu_year_{i}")
-
         st.subheader("Projects")
         for i, proj in enumerate(edited_data.get('projects', [])):
             with st.container(border=True):
@@ -217,7 +315,6 @@ elif page == "review":
                 details_string = "\n".join(proj.get('details', []))
                 edited_details_string = st.text_area(f"Project Details (one bullet point per line)", value=details_string, key=f"proj_details_{i}")
                 proj['details'] = edited_details_string
-
         st.subheader("Experience")
         for i, exp in enumerate(edited_data.get('experience', [])):
              with st.container(border=True):
@@ -227,7 +324,6 @@ elif page == "review":
                 exp_details_string = "\n".join(exp.get('details', []))
                 edited_exp_details_string = st.text_area(f"Job Details (one bullet point per line)", value=exp_details_string, key=f"exp_details_{i}")
                 exp['details'] = edited_exp_details_string
-
         if st.button("Save & Choose Template →", use_container_width=True, type="primary"):
             edited_data['skills'] = [s.strip() for s in edited_skills_string.split('\n') if s.strip()]
             for proj in edited_data.get('projects', []):
@@ -239,6 +335,10 @@ elif page == "review":
             st.rerun()
 
 elif page == "templates":
+    if st.session_state.get('feedback_triggered'):
+        display_feedback_dialog()
+        st.session_state.feedback_triggered = False
+
     if 'resume_data' not in st.session_state or not st.session_state.resume_data:
         st.warning("Please generate your resume data first!")
         st.link_button("Click here to go back to the form", "?page=builder")
@@ -247,7 +347,6 @@ elif page == "templates":
         st.caption(f"Great, **{st.session_state.resume_data.get('name', '')}**! Now pick a template and get your PDF.")
         st.link_button("← Back to Review Data", "?page=review")
         st.divider()
-
         form_col, preview_col = st.columns([1, 2])
         with form_col:
             template_name = st.selectbox("Select a template:", templates.keys(), key="template_select")
@@ -259,18 +358,21 @@ elif page == "templates":
                 template = env.get_template(template_filename)
                 html_out = template.render(st.session_state.resume_data, accent_color=accent_color)
                 pdf_bytes = html_to_pdf(html_out)
-                st.download_button(
+                
+                if st.download_button(
                     label="📥 Download PDF", data=pdf_bytes,
                     file_name=f"{st.session_state.resume_data.get('name', 'resume').replace(' ', '_')}_Resume.pdf",
-                    mime="application/pdf", use_container_width=True
-                )
+                    mime="application/pdf", use_container_width=True,
+                    on_click=lambda: st.session_state.update(feedback_triggered=True)
+                ):
+                    pass
+                    
             except Exception as e:
                 st.error(f"❌ An error occurred during PDF generation: {e}")
                 html_out = f"<h3>Error rendering template:</h3><p>{e}</p>"
         with preview_col:
             st.subheader("📄 Preview")
             if 'html_out' in locals() and html_out:
-                # --- FIX: Wrapped the preview HTML in a styled div for a white background ---
                 styled_preview = f'<div style="background-color:white; border-radius: 8px; padding: 25px; border: 1px solid #ddd;">{html_out}</div>'
                 st.components.v1.html(styled_preview, height=800, scrolling=True)
     show_footer()
@@ -279,7 +381,6 @@ elif page == "demo":
     st.markdown("### Template Showcase")
     st.caption("Explore our professionally designed templates below.")
     st.divider()
-
     def render_demo_card(col, template_name):
         with col:
             filename, color = templates[template_name]
@@ -287,12 +388,9 @@ elif page == "demo":
             env = Environment(loader=FileSystemLoader(BASE_DIR))
             template = env.get_template(filename)
             html_out = template.render(sample_data, accent_color=color)
-            
-            # --- FIX: Wrapped the demo HTML in a styled div for a white background ---
             styled_demo = f'<div style="background-color:white; border-radius: 8px; padding: 25px; border: 1px solid #ddd;">{html_out}</div>'
             st.components.v1.html(styled_demo, height=450, scrolling=True)
             st.link_button(f"Create with this Style →", f"?page=builder", use_container_width=True)
-
     row1_col1, row1_col2 = st.columns(2)
     render_demo_card(row1_col1, "Corporate"); render_demo_card(row1_col2, "Modern")
     st.markdown("<br>", unsafe_allow_html=True)
